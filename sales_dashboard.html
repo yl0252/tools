@@ -817,7 +817,7 @@ function processNewData(rows){
     }
   });
 
-  const months12 = [...allMonths].sort().slice(-13,-1);
+  const months12 = [...allMonths].sort().slice(-13);
   if(!months12.length) throw new Error('Could not parse any dates from the Month column.');
   const mlabel = mk => { try{ const d=new Date(mk+'-01'); return d.toLocaleString('en-US',{month:'short',year:'numeric'}); }catch{return mk;} };
   const last3 = months12.slice(-4,-1);
