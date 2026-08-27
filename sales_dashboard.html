@@ -290,21 +290,26 @@ const D = {"months":[],"custList":[],"custMap":{},"smList":[],"custDrops":[],"it
       if(json){
         const saved = JSON.parse(json);
         if(saved.custList && saved.custList.length){
-          D.custList  = saved.custList;
-          D.custMap   = saved.custMap || D.custMap;
-          D.months    = saved.months  || D.months;
-          D.smList    = saved.smList  || D.smList;
-          D.custDrops = saved.custDrops || [];
-          D.itemDrops = saved.itemDrops || [];
-          D.reorders  = saved.reorders  || [];
-          filteredList = [...D.custList];
-          document.getElementById('alert-count').textContent =
-            D.custDrops.length + D.itemDrops.length;
+          D.custList    = saved.custList;
+          D.custMap     = saved.custMap     || {};
+          D.months      = saved.months      || [];
+          D.monthLabels = saved.monthLabels || [];
+          D.prev3Labels = saved.prev3Labels || [];
+          D.last3Labels = saved.last3Labels || [];
+          D.smList      = saved.smList      || [];
+          D.custDrops   = saved.custDrops   || [];
+          D.itemDrops   = saved.itemDrops   || [];
+          D.reorders    = saved.reorders    || [];
+          D.company     = saved.company     || {};
+          D.custDetail  = saved.custDetail  || {};
+          filteredList  = [...D.custList];
+          var alertEl = document.getElementById('alert-count');
+          if(alertEl) alertEl.textContent = (D.custDrops.length + D.itemDrops.length) || 0;
           showCompany();
           updateReorderCount();
-          const savedAt = localStorage.getItem('dash_saved_at');
-          const el = document.getElementById('dash-last-saved');
-          if(el && savedAt) el.textContent = 'Last upload: '+savedAt;
+          var savedAt = localStorage.getItem('dash_saved_at');
+          var savedEl = document.getElementById('dash-last-saved');
+          if(savedEl && savedAt) savedEl.textContent = 'Last upload: '+savedAt;
         }
       }
     }
