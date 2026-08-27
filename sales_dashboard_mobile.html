@@ -674,7 +674,7 @@ function selectCustomer(code){
     </div>
 
     ${det.stoppedItems&&det.stoppedItems.length?`<div class="card">
-      <div class="card-title">⛔ Items This Customer Stopped Buying <span class="card-subtitle">Bought Jan–Mar 2026, not in Apr–Jun 2026</span></div>
+      <div class="card-title">⛔ Items This Customer Stopped Buying <span class="card-subtitle">${D.prev3Labels&&D.prev3Labels.length?D.prev3Labels[0]+"–"+D.prev3Labels[2]:"previous 3 months"}, not in ${D.last3Labels&&D.last3Labels.length?D.last3Labels[0]+"–"+D.last3Labels[2]:"last 3 months"}</span></div>
       <table>
         <thead><tr><th>Item #</th><th>Description</th><th class="num">Last 3-Month Sales</th><th class="num">Total Sales</th></tr></thead>
         <tbody>${det.stoppedItems.map(s=>`
@@ -953,14 +953,19 @@ function processNewData(rows){
   // Save processed data to localStorage so it persists across reloads
   try{
     const save = {
-      custList: D.custList,
-      custMap:  D.custMap,
-      months:   D.months,
-      smList:   D.smList,
-      custDrops: D.custDrops,
-      itemDrops: D.itemDrops,
-      reorders:  D.reorders,
-      savedAt:  new Date().toISOString(),
+      custList:    D.custList,
+      custMap:     D.custMap,
+      months:      D.months,
+      monthLabels: D.monthLabels,
+      prev3Labels: D.prev3Labels,
+      last3Labels: D.last3Labels,
+      smList:      D.smList,
+      custDrops:   D.custDrops,
+      itemDrops:   D.itemDrops,
+      reorders:    D.reorders,
+      company:     D.company,
+      custDetail:  D.custDetail,
+      savedAt:     new Date().toISOString(),
     };
     // Use chunked storage for large datasets
     const json = JSON.stringify(save);
