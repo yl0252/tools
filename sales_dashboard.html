@@ -301,15 +301,21 @@ const D = {"months":[],"custList":[],"custMap":{},"smList":[],"custDrops":[],"it
           D.itemDrops   = saved.itemDrops   || [];
           D.reorders    = saved.reorders    || [];
           D.company     = saved.company     || {};
-          D.custDetail  = saved.custDetail  || {};
           filteredList  = [...D.custList];
           var alertEl = document.getElementById('alert-count');
           if(alertEl) alertEl.textContent = (D.custDrops.length + D.itemDrops.length) || 0;
-          showCompany();
-          updateReorderCount();
           var savedAt = localStorage.getItem('dash_saved_at');
           var savedEl = document.getElementById('dash-last-saved');
           if(savedEl && savedAt) savedEl.textContent = 'Last upload: '+savedAt;
+          // Load custDetail from IndexedDB then render
+          _idbLoad('dash_custDetail').then(function(det){
+            D.custDetail = det || {};
+            showCompany();
+            updateReorderCount();
+          }).catch(function(){
+            showCompany();
+            updateReorderCount();
+          });
         }
       }
     }
@@ -932,6 +938,7 @@ function processNewData(rows){
 
   // Save processed data to localStorage so it persists across reloads
   try{
+    // Save main data (small) to localStorage
     const save = {
       custList:    D.custList,
       custMap:     D.custMap,
@@ -944,10 +951,8 @@ function processNewData(rows){
       itemDrops:   D.itemDrops,
       reorders:    D.reorders,
       company:     D.company,
-      custDetail:  D.custDetail,
       savedAt:     new Date().toISOString(),
     };
-    // Use chunked storage for large datasets
     const json = JSON.stringify(save);
     const CHUNK = 500000;
     const count = Math.ceil(json.length/CHUNK);
@@ -956,8 +961,10 @@ function processNewData(rows){
       localStorage.setItem('dash_data_chunk_'+i, json.slice(i*CHUNK,(i+1)*CHUNK));
     }
     localStorage.setItem('dash_saved_at', new Date().toLocaleString());
-    document.getElementById('dash-last-saved') && 
-      (document.getElementById('dash-last-saved').textContent = 'Last upload: '+new Date().toLocaleString());
+    // Save custDetail to IndexedDB (no size limit)
+    _idbSave('dash_custDetail', D.custDetail).catch(function(){});
+    var savedEl = document.getElementById('dash-last-saved');
+    if(savedEl) savedEl.textContent = 'Last upload: '+new Date().toLocaleString();
   }catch(e){ console.warn('Dashboard save failed:', e); }
 }
 
