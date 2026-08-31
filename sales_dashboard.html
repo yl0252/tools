@@ -608,9 +608,9 @@ function selectCustomer(code){
   destroyCharts();
   const panel=document.getElementById('right-panel');
 
-  const trendS=Array.isArray(trendS)?trendS:Array(13).fill(0);
-  const trendP=Array.isArray(trendP)?trendP:Array(13).fill(0);
-  const trendQ=Array.isArray(trendQ)?trendQ:Array(13).fill(0);
+  const trendS=Array.isArray(det.trendSales)?det.trendSales:Array(13).fill(0);
+  const trendP=Array.isArray(det.trendProfit)?det.trendProfit:Array(13).fill(0);
+  const trendQ=Array.isArray(det.trendQty)?det.trendQty:Array(13).fill(0);
   const s_last=trendS.slice(-4,-1).reduce((a,b)=>a+b,0);
   const s_prev=trendS.slice(-7,-4).reduce((a,b)=>a+b,0);
   const trendPct=s_prev>0?Math.round((s_last-s_prev)/s_prev*100):0;
