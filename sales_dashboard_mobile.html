@@ -518,7 +518,7 @@ function showCompany(){
               <td class="num"><span class="margin-pill ${mPill(c.margin)}">${c.margin}%</span></td>
               <td class="num">${c.months}</td>
               <td><span class="ci-dot ${lastDot(c.last)}" style="margin-right:5px"></span>${mLabel(c.last)}</td>
-              <td>${det?spark(det.trendSales):''}</td>
+              <td>${det?spark(trendS):''}</td>
             </tr>`;
           }).join('')}</tbody>
         </table>
@@ -567,7 +567,7 @@ function showAlerts(){
               <div class="drop-card-body">
                 <div class="drop-card-name">${d.name}</div>
                 <div class="drop-card-meta">Code ${d.code} · ${c?c.months:0} months active · ${mLabel(c?c.last:'')}</div>
-                ${det?spark(det.trendSales,'#dc2626'):''}
+                ${det?spark(trendS,'#dc2626'):''}
               </div>
               <div class="drop-card-right">
                 <div class="drop-pct">▼${d.drop_pct}%</div>
@@ -633,8 +633,11 @@ function selectCustomer(code){
   destroyCharts();
   const panel=document.getElementById('right-panel');
 
-  const s_last=det.trendSales.slice(-4,-1).reduce((a,b)=>a+b,0);
-  const s_prev=det.trendSales.slice(-7,-4).reduce((a,b)=>a+b,0);
+  const trendS=Array.isArray(trendS)?trendS:Array(13).fill(0);
+  const trendP=Array.isArray(trendP)?trendP:Array(13).fill(0);
+  const trendQ=Array.isArray(trendQ)?trendQ:Array(13).fill(0);
+  const s_last=trendS.slice(-4,-1).reduce((a,b)=>a+b,0);
+  const s_prev=trendS.slice(-7,-4).reduce((a,b)=>a+b,0);
   const trendPct=s_prev>0?Math.round((s_last-s_prev)/s_prev*100):0;
 
   panel.innerHTML=`
@@ -739,8 +742,8 @@ function selectCustomer(code){
   charts.trend = safeChart('ch-trend',{
     type:'line',
     data:{labels:D.monthLabels,datasets:[
-      {label:'Sales',data:det.trendSales,borderColor:'#2563eb',backgroundColor:'rgba(37,99,235,.08)',fill:true,tension:.35,pointRadius:4,pointBackgroundColor:'#2563eb',borderWidth:2},
-      {label:'Profit',data:det.trendProfit,borderColor:'#16a34a',backgroundColor:'rgba(22,163,74,.05)',fill:true,tension:.35,pointRadius:4,pointBackgroundColor:'#16a34a',borderWidth:2}
+      {label:'Sales',data:trendS,borderColor:'#2563eb',backgroundColor:'rgba(37,99,235,.08)',fill:true,tension:.35,pointRadius:4,pointBackgroundColor:'#2563eb',borderWidth:2},
+      {label:'Profit',data:trendP,borderColor:'#16a34a',backgroundColor:'rgba(22,163,74,.05)',fill:true,tension:.35,pointRadius:4,pointBackgroundColor:'#16a34a',borderWidth:2}
     ]},
     options:{responsive:true,plugins:{legend:{position:'top'},tooltip:{callbacks:{label:c=>'$'+c.raw.toLocaleString()}}},
       scales:{y:{ticks:{callback:v=>v>=1e3?'$'+(v/1e3).toFixed(0)+'K':'$'+v}}}}
@@ -748,7 +751,7 @@ function selectCustomer(code){
 
   charts.qty = safeChart('ch-qty',{
     type:'bar',
-    data:{labels:D.monthLabels,datasets:[{label:'Qty',data:det.trendQty,backgroundColor:'rgba(8,145,178,.65)',borderRadius:4}]},
+    data:{labels:D.monthLabels,datasets:[{label:'Qty',data:trendQ,backgroundColor:'rgba(8,145,178,.65)',borderRadius:4}]},
     options:{responsive:true,plugins:{legend:{display:false}},scales:{y:{ticks:{callback:v=>v.toLocaleString()}}}}
   });
 
@@ -1341,12 +1344,12 @@ async function syncSave(){
       });
     } else {
       D.months.forEach((mk, mi) => {
-        const sv = det.trendSales[mi]||0;
-        if(sv===0 && !det.trendProfit[mi] && !det.trendQty[mi]) return;
+        const sv = trendS[mi]||0;
+        if(sv===0 && !trendP[mi] && !trendQ[mi]) return;
         rows.push({
           Code: c.code, Name: c.name, Month: D.monthLabels[mi],
           Itemno: '', Desc: '',
-          Sales: sv, Profit: det.trendProfit[mi]||0, QTY: det.trendQty[mi]||0,
+          Sales: sv, Profit: trendP[mi]||0, QTY: trendQ[mi]||0,
           Salesman: det.salesman||''
         });
       });
