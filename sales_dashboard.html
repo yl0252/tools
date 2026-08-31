@@ -493,7 +493,7 @@ function showCompany(){
               <td class="num"><span class="margin-pill ${mPill(c.margin)}">${c.margin}%</span></td>
               <td class="num">${c.months}</td>
               <td><span class="ci-dot ${lastDot(c.last)}" style="margin-right:5px"></span>${mLabel(c.last)}</td>
-              <td>${det?spark(trendS):''}</td>
+              <td>${det?spark(det.trendSales):''}</td>
             </tr>`;
           }).join('')}</tbody>
         </table>
@@ -542,7 +542,7 @@ function showAlerts(){
               <div class="drop-card-body">
                 <div class="drop-card-name">${d.name}</div>
                 <div class="drop-card-meta">Code ${d.code} · ${c?c.months:0} months active · ${mLabel(c?c.last:'')}</div>
-                ${det?spark(trendS,'#dc2626'):''}
+                ${det?spark(det.trendSales,'#dc2626'):''}
               </div>
               <div class="drop-card-right">
                 <div class="drop-pct">▼${d.drop_pct}%</div>
@@ -563,7 +563,7 @@ function showAlerts(){
               <div class="drop-card-body">
                 <div class="drop-card-name">${d.desc||d.item}</div>
                 <div class="drop-card-meta">Item: ${d.item}</div>
-                ${d.trendSales?spark(d.trendSales,'#d97706'):''}
+                ${d.det.trendSales?spark(d.det.trendSales,'#d97706'):''}
               </div>
               <div class="drop-card-right">
                 <div class="drop-pct">▼${d.drop_pct}%</div>
@@ -1086,13 +1086,13 @@ function showItemDetail(idx){
     </div>`:''}`;
 
   // Trend chart
-  if(d.trendSales){
+  if(d.det.trendSales){
     charts.itemTrend = safeChart('ch-item-trend',{
       type:'bar',
       data:{labels:D.monthLabels, datasets:[
-        {label:'Sales',data:d.trendSales,backgroundColor:d.trendSales.map((v,i)=>
+        {label:'Sales',data:d.det.trendSales,backgroundColor:d.det.trendSales.map((v,i)=>
           i>=D.months.length-4&&i<=D.months.length-2?'rgba(220,38,38,.75)':'rgba(37,99,235,.65)'),borderRadius:4},
-        {label:'Profit',data:d.trendProfit,backgroundColor:'rgba(22,163,74,.5)',borderRadius:4}
+        {label:'Profit',data:d.det.trendProfit,backgroundColor:'rgba(22,163,74,.5)',borderRadius:4}
       ]},
       options:{responsive:true,plugins:{legend:{position:'top'},
         tooltip:{callbacks:{label:c=>'$'+c.raw.toLocaleString()}}},
@@ -1312,12 +1312,12 @@ async function syncSave(){
       });
     } else {
       D.months.forEach((mk, mi) => {
-        const sv = trendS[mi]||0;
-        if(sv===0 && !trendP[mi] && !trendQ[mi]) return;
+        const sv = det.trendSales[mi]||0;
+        if(sv===0 && !det.trendProfit[mi] && !det.trendQty[mi]) return;
         rows.push({
           Code: c.code, Name: c.name, Month: D.monthLabels[mi],
           Itemno: '', Desc: '',
-          Sales: sv, Profit: trendP[mi]||0, QTY: trendQ[mi]||0,
+          Sales: sv, Profit: det.trendProfit[mi]||0, QTY: det.trendQty[mi]||0,
           Salesman: det.salesman||''
         });
       });
