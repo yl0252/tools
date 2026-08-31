@@ -304,6 +304,34 @@ function safeChart(id, config){
 
 
 
+// ── IndexedDB helpers ────────────────────────────────────────────────────
+function _idbOpen(){
+  return new Promise(function(res,rej){
+    var req = indexedDB.open('dash_db',1);
+    req.onupgradeneeded = function(e){ e.target.result.createObjectStore('kv'); };
+    req.onsuccess = function(e){ res(e.target.result); };
+    req.onerror   = function(e){ rej(e.target.error); };
+  });
+}
+function _idbSave(key,val){
+  return _idbOpen().then(function(db){
+    return new Promise(function(res,rej){
+      var tx = db.transaction('kv','readwrite');
+      tx.objectStore('kv').put(val,key);
+      tx.oncomplete = res; tx.onerror = rej;
+    });
+  });
+}
+function _idbLoad(key){
+  return _idbOpen().then(function(db){
+    return new Promise(function(res,rej){
+      var req = db.transaction('kv','readonly').objectStore('kv').get(key);
+      req.onsuccess = function(e){ res(e.target.result); };
+      req.onerror   = rej;
+    });
+  });
+}
+
 const D = {"months":[],"custList":[],"custMap":{},"smList":[],"custDrops":[],"itemDrops":[],"reorders":[],"custDetail":{}};
 // ── Restore saved dashboard data if available ─────────────────────────────
 (function(){
@@ -582,7 +610,16 @@ function selectCustomer(code){
 
   const c=D.custList.find(x=>x.code===code);
   const det=D.custDetail[code];
-  if(!c||!det) return;
+  if(!c) return;
+  if(!det){
+    // custDetail not loaded yet - load from IDB on demand
+    _idbLoad('dash_custDetail').then(function(allDet){
+      if(allDet) D.custDetail = allDet;
+      if(D.custDetail[code]) selectCustomer(code);
+      else console.warn('No detail for', code);
+    }).catch(function(){ console.warn('IDB load failed'); });
+    return;
+  }
 
   const margin=c.margin;
   const drop=D.custDrops.find(d=>d.code===code);

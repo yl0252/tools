@@ -279,6 +279,34 @@ function safeChart(id, config){
 
 
 
+// ── IndexedDB helpers ────────────────────────────────────────────────────
+function _idbOpen(){
+  return new Promise(function(res,rej){
+    var req = indexedDB.open('dash_db',1);
+    req.onupgradeneeded = function(e){ e.target.result.createObjectStore('kv'); };
+    req.onsuccess = function(e){ res(e.target.result); };
+    req.onerror   = function(e){ rej(e.target.error); };
+  });
+}
+function _idbSave(key,val){
+  return _idbOpen().then(function(db){
+    return new Promise(function(res,rej){
+      var tx = db.transaction('kv','readwrite');
+      tx.objectStore('kv').put(val,key);
+      tx.oncomplete = res; tx.onerror = rej;
+    });
+  });
+}
+function _idbLoad(key){
+  return _idbOpen().then(function(db){
+    return new Promise(function(res,rej){
+      var req = db.transaction('kv','readonly').objectStore('kv').get(key);
+      req.onsuccess = function(e){ res(e.target.result); };
+      req.onerror   = rej;
+    });
+  });
+}
+
 const D = {"months":[],"custList":[],"custMap":{},"smList":[],"custDrops":[],"itemDrops":[],"reorders":[],"custDetail":{}};
 // ── Restore saved dashboard data if available ─────────────────────────────
 (function(){
@@ -557,7 +585,16 @@ function selectCustomer(code){
 
   const c=D.custList.find(x=>x.code===code);
   const det=D.custDetail[code];
-  if(!c||!det) return;
+  if(!c) return;
+  if(!det){
+    // custDetail not loaded yet - load from IDB on demand
+    _idbLoad('dash_custDetail').then(function(allDet){
+      if(allDet) D.custDetail = allDet;
+      if(D.custDetail[code]) selectCustomer(code);
+      else console.warn('No detail for', code);
+    }).catch(function(){ console.warn('IDB load failed'); });
+    return;
+  }
 
   const margin=c.margin;
   const drop=D.custDrops.find(d=>d.code===code);
@@ -642,19 +679,21 @@ function selectCustomer(code){
           <th class="num">Margin</th><th class="num">Qty</th>
           <th>12-Month Trend</th><th>Status</th>
         </tr></thead>
-        <tbody>${det.items.map(it=>{
+        <tbody>${(det.items||[]).map(it=>{
+          try{
           const m=it.sales>0?Math.round(it.profit/it.sales*100):0;
-          const stopped=it.stoppedRecently;
+          const stopped=it.stoppedRecently||false;
           return`<tr class="${stopped?'stopped-row':''}">
             <td class="item-code">${it.item}</td>
             <td style="max-width:220px;font-size:12px">${it.desc}</td>
             <td class="num">${fmt(it.sales)}</td>
             <td class="num" style="color:var(--green)">${fmt(it.profit)}</td>
             <td class="num"><span class="margin-pill ${mPill(m)}">${m}%</span></td>
-            <td class="num">${it.qty.toLocaleString()}</td>
-            <td>${spark(it.trend,stopped?'#dc2626':'#2563eb')}</td>
-            <td>${stopped?'<span class="stopped-badge">⛔ Stopped</span>':'<span style="font-size:10px;color:var(--green)">✓ Active</span>'}</td>
+            <td class="num">${(it.qty||0).toLocaleString()}</td>
+            <td>${spark(Array.isArray(it.trend)?it.trend:[],stopped?'#dc2626':'#2563eb')}</td>
+            <td>${stopped?'<span class=\"stopped-badge\">⛔ Stopped</span>':'<span style=\"font-size:10px;color:var(--green)\">✓ Active</span>'}</td>
           </tr>`;
+          }catch(e){ return '<tr><td colspan=8 style=\"color:red\">'+e.message+'</td></tr>'; }
         }).join('')}</tbody>
       </table>
     </div>
