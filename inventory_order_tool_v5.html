@@ -2599,6 +2599,56 @@ async function loadAllFromSheets(){
   }
 }
 
+// ── Transit Detail Popup ─────────────────────────────────────────────────
+function showTransitDetail(itemNo){
+  var lines = itemsInTransit[String(itemNo)] || [];
+  if(!lines.length) return;
+
+  // Build popup
+  var existing = document.getElementById('transit-popup');
+  if(existing) existing.remove();
+
+  var rows = lines.map(function(l){
+    var etaStr = l.eta ? new Date(l.eta).toLocaleDateString('en-US',{month:'short',day:'numeric',year:'numeric'}) : '—';
+    var statusColor = l.status.toLowerCase()==='transit'?'#0ea5e9':'#f59e0b';
+    return '<tr>'
+      +'<td style="padding:8px 12px;font-family:monospace;font-weight:700;color:'+statusColor+'">'+l.container+'</td>'
+      +'<td style="padding:8px 12px;font-weight:700;text-align:right">'+fmtN(l.qty)+'</td>'
+      +'<td style="padding:8px 12px;color:#475569">'+etaStr+'</td>'
+      +'<td style="padding:8px 12px;color:#475569">'+l.vendor+'</td>'
+      +'<td style="padding:8px 12px"><span style="font-size:10px;padding:2px 8px;border-radius:6px;background:'+statusColor+'22;color:'+statusColor+';font-weight:700">'+l.status+'</span></td>'
+      +'</tr>';
+  }).join('');
+
+  var totalQty = lines.reduce(function(a,x){return a+x.qty;},0);
+
+  var popup = document.createElement('div');
+  popup.id = 'transit-popup';
+  popup.style.cssText = 'position:fixed;inset:0;background:rgba(0,0,0,.5);z-index:9999;display:flex;align-items:center;justify-content:center;padding:20px';
+  popup.innerHTML = '<div style="background:#fff;border-radius:14px;padding:24px;max-width:650px;width:100%;max-height:80vh;overflow-y:auto;box-shadow:0 20px 60px rgba(0,0,0,.3)">'
+    +'<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:16px">'
+    +'<div>'
+    +'<div style="font-size:16px;font-weight:800;color:#1e3a5f">🚢 '+itemNo+' — In Transit</div>'
+    +'<div style="font-size:12px;color:#64748b;margin-top:2px">'+fmtN(totalQty)+' units across '+lines.length+' shipment'+(lines.length>1?'s':'')+'</div>'
+    +'</div>'
+    +'<button onclick="var p=document.getElementById(\"transit-popup\");if(p)p.remove();" style="background:#f1f5f9;border:none;border-radius:8px;padding:6px 12px;cursor:pointer;font-size:13px">✕ Close</button>'
+    +'</div>'
+    +'<table style="width:100%;border-collapse:collapse">'
+    +'<thead><tr style="background:#f8fafc">'
+    +'<th style="padding:8px 12px;text-align:left;font-size:11px;color:#64748b;font-weight:700;text-transform:uppercase">Container</th>'
+    +'<th style="padding:8px 12px;text-align:right;font-size:11px;color:#64748b;font-weight:700;text-transform:uppercase">Qty</th>'
+    +'<th style="padding:8px 12px;text-align:left;font-size:11px;color:#64748b;font-weight:700;text-transform:uppercase">ETA</th>'
+    +'<th style="padding:8px 12px;text-align:left;font-size:11px;color:#64748b;font-weight:700;text-transform:uppercase">Vendor</th>'
+    +'<th style="padding:8px 12px;text-align:left;font-size:11px;color:#64748b;font-weight:700;text-transform:uppercase">Status</th>'
+    +'</tr></thead>'
+    +'<tbody>'+rows+'</tbody>'
+    +'</table>'
+    +'</div>';
+
+  popup.addEventListener('click', function(e){ if(e.target===popup) popup.remove(); });
+  document.body.appendChild(popup);
+}
+
 // ── Items In Transit from Shipment Tracker ────────────────────────────────
 let itemsInTransit = {};
 
@@ -2625,17 +2675,23 @@ function loadShipmentsInTransit(){
     var containers = 0;
 
     shipments.forEach(function(s){
-      // Include ordered, in transit, and arrived-but-not-counted statuses
       var status = (s.status||'').toLowerCase();
       if(status === 'transit' || status === 'ordered' || status === 'in transit' || status === 'on order'){
         containers++;
         (s.items||[]).forEach(function(it){
-          // Item number could be in various fields
           var itemNo = String(it.item||it.itemNo||it.sku||it.partNo||'').trim();
           if(!itemNo) return;
           var qty = parseFloat(it.qty||it.quantity||it.units||0)||0;
           if(qty > 0){
-            itemsInTransit[itemNo] = (itemsInTransit[itemNo]||0) + qty;
+            if(!itemsInTransit[itemNo]) itemsInTransit[itemNo] = [];
+            itemsInTransit[itemNo].push({
+              container: s.container||'',
+              qty:       qty,
+              eta:       s.eta||'',
+              vendor:    s.vendor||'',
+              status:    s.status||'',
+              po:        s.po||'',
+            });
             count++;
           }
         });
@@ -2643,8 +2699,8 @@ function loadShipmentsInTransit(){
     });
 
     var msg = count > 0
-      ? '✓ '+count+' items in '+containers+' containers in transit'
-      : 'No items found in transit — make sure shipments are saved from the Shipment Tracker first';
+      ? '✓ '+count+' lines across '+containers+' containers'
+      : 'No items found — save shipments from the Shipment Tracker first';
     document.getElementById('shipment-status').textContent = msg;
     document.getElementById('shipment-status').style.color = count>0?'#4ade80':'#fbbf24';
 
